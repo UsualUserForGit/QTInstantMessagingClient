@@ -1,0 +1,10 @@
+<RCC>
+    <qresource prefix="/">
+        <file>images/cropped_logo.png</file>
+        <file>images/password_logo.png</file>
+        <file>images/login_logo.png</file>
+        <file>images/background.jpg</file>
+        <file>images/whispertalk_logo.png</file>
+        <file>images/inside_logo.png</file>
+    </qresource>
+</RCC>
