@@ -1,8 +1,6 @@
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
 
-#include <QShortcut>
-
 
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
@@ -18,11 +16,16 @@ MainWindow::MainWindow(QWidget *parent) :
 
     // Create a shortcut for the Ctrl + Enter key combination it will create a new line inside message_input_text_edit
     QShortcut* enterCtrlShortcut = new QShortcut(QKeySequence(Qt::CTRL + Qt::Key_Return), message_input_text_edit);
-    connect(enterCtrlShortcut, SIGNAL(activated()), this, SLOT(on_enter_ctrl_pressed()));
 
     // Connects section
+    connect(enterCtrlShortcut, SIGNAL(activated()), this, SLOT(on_enter_ctrl_pressed()));
     connect(message_input_text_edit, SIGNAL(enterPressed()), this, SLOT(on_sendButton_clicked()));
     connect(ui->send_Button, SIGNAL(clicked()), this, SLOT(on_sendButton_clicked()));
+}
+
+MainWindow::MainWindow(QTcpSocket *socket, QWidget *parent): MainWindow(parent)
+{
+    this->socket = socket;
 }
 
 // Connection routine
@@ -60,7 +63,7 @@ void MainWindow::socketConnected()
     qDebug() << "Connected to server.";
     printMessage("<font color=\"Green\">Connected to server.</font>");
     QString name = ui->nameInput->text();
-    socket->write("<font color=\"purple\">" + name.toUtf8() + " has joined the chat room.</font>");
+    //socket->write("<font color=\"purple\">" + name.toUtf8() + " has joined the chat room.</font>");
     ui->connectButton->setText("Disconnect");
     connectedToHost = true;
 }
@@ -86,19 +89,29 @@ void MainWindow::printMessage(QString message)
     ui->chatDisplay->append(message);
 }
 
+void MainWindow::sendJsonToServer(const QJsonObject &jsonObject)
+{
+    QJsonDocument jsonDocument(jsonObject);
+    QByteArray jsonData = jsonDocument.toJson();
+
+    // Send the JSON data to the server
+    socket->write(jsonData);
+}
+
 // If we are connected to the server then, messages will be sent to the server
 // in other case we will just clear the input field and set it's default height
 void MainWindow::on_sendButton_clicked()
 {
     if (connectedToHost)
     {
-        QString name = ui->nameInput->text();
-        QString message = message_input_text_edit->toPlainText();
-        socket->write("<font color=\"blue\">" + name.toUtf8() + "</font>: " + message.toUtf8());
+
+
+        //QString name = ui->nameInput->text();
+        //QString message = message_input_text_edit->toPlainText();
+        //socket->write("<font color=\"blue\">" + name.toUtf8() + "</font>: " + message.toUtf8());
     }
     message_input_text_edit->clear();
     message_input_text_edit->setMaximumHeight(24);
-    qDebug() << "maximum height - " << message_input_text_edit->maximumHeight();
 }
 
 // If Ctrl + Enter is pressed while user is in Input field, we add another line of input

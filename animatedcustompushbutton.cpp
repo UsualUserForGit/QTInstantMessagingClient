@@ -6,8 +6,8 @@
 
 AnimatedCustomPushButton::AnimatedCustomPushButton(QWidget *parent) :
     QPushButton(parent),
-    colorAnimation(this, "color"),
-    currentColor("white")
+    currentColor("white"),
+    colorAnimation(this, "color")
 {
     this->installEventFilter(this);
 }
@@ -30,7 +30,7 @@ const QColor& AnimatedCustomPushButton::GetColor() const
 }
 
 // If button is hovered we call StartHoverEnterAnimation(); if hover is ended - StartHoverLeaveAnimation();
-bool AnimatedCustomPushButton::eventFilter(QObject *obj, QEvent *e)
+bool AnimatedCustomPushButton::eventFilter(QObject *, QEvent *e)
 {
     if (e->type() == QEvent::HoverEnter) {
         StartHoverEnterAnimation();

@@ -1,10 +1,14 @@
 #ifndef AUTHENTICATIONFORM_H
 #define AUTHENTICATIONFORM_H
 
+#include "animatedcustompushbutton.h"
+#include "mainwindow.h"
+
 #include <QWidget>
 #include <QPaintEvent>
-
-#include "animatedcustompushbutton.h"
+#include <QJsonDocument>
+#include <QJsonObject>
+#include <QTcpSocket>
 
 
 namespace Ui {
@@ -21,6 +25,15 @@ public:
 
 private:
     Ui::AuthenticationForm *ui;
+    MainWindow w;
+    QTcpSocket* socket;
+
+
+    enum class JsonFileType {SignInData, RegisterUser, SignInResults, RegisterUserResults};
+
+    QJsonObject createJsonObject(JsonFileType jsonFile);
+    void sendJsonToServer(const QJsonObject& jsonObject);
+    void handleServerResponse(QJsonObject jsonObject);
 
 protected:
     AnimatedCustomPushButton *login_Button;
@@ -29,6 +42,11 @@ protected:
 
 private slots:
     void login_Button_clicked();
+
+    void socketConnected();
+    void socketDisconnected();
+    void socketReadyRead();
+
 };
 
 #endif // AUTHENTICATIONFORM_H

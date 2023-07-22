@@ -1,11 +1,16 @@
 #ifndef MAINWINDOW_H
 #define MAINWINDOW_H
 
+#include "customtextedit.h"
+
 #include <QMainWindow>
 #include <QDebug>
+#include <QShortcut>
+
 #include <QTcpSocket>
 
-#include "customtextedit.h"
+#include <QJsonDocument>
+#include <QJsonObject>
 
 
 namespace Ui {
@@ -18,6 +23,8 @@ class MainWindow : public QMainWindow
 
 public:
     explicit MainWindow(QWidget *parent = nullptr);
+    MainWindow(QTcpSocket *socket, QWidget *parent = nullptr);
+
     ~MainWindow();
 
 private slots:
@@ -35,6 +42,7 @@ private:
     CustomTextEdit* message_input_text_edit;
 
     void printMessage(QString message);
+    void sendJsonToServer(const QJsonObject& jsonObject);
 };
 
 #endif // MAINWINDOW_H

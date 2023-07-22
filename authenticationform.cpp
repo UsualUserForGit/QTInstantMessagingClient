@@ -1,5 +1,6 @@
 #include <QPainter>
 #include <QDebug>
+#include <QMessageBox>
 
 #include "authenticationform.h"
 #include "ui_authenticationform.h"
@@ -8,6 +9,7 @@
 AuthenticationForm::AuthenticationForm(QWidget *parent) :
     QWidget(parent),
     ui(new Ui::AuthenticationForm),
+    socket(new QTcpSocket()),
     login_Button(new AnimatedCustomPushButton())
 {
     ui->setupUi(this);
@@ -30,24 +32,116 @@ AuthenticationForm::AuthenticationForm(QWidget *parent) :
     ui->password_lineEdit->setMaximumHeight(40);
     this->login_Button->setMaximumHeight(60);
 
-    //Finally, add our custom login button to the layout
+    // Finally, add our custom login button to the layout
     ui->login_button_frame_horizontalLayout->addWidget(login_Button);
 
     // Making Form not resizable
     this->setWindowFlags(Qt::MSWindowsFixedSizeDialogHint);
 
-    //connection section
+    // Connections
     connect(login_Button, SIGNAL(clicked()), this, SLOT(login_Button_clicked()));
+
+    connect(socket, SIGNAL(connected()), this, SLOT(socketConnected()));
+    connect(socket, SIGNAL(disconnected()), this, SLOT(socketDisconnected()));
+    connect(socket, SIGNAL(readyRead()), this, SLOT(socketReadyRead()));
+
+    socket->connectToHost("127.0.0.1", 8001);
 }
 
+// Destructor
 AuthenticationForm::~AuthenticationForm()
 {
     delete ui;
 }
 
 
+QJsonObject AuthenticationForm::createJsonObject(JsonFileType jsonFile)
+{
+    QJsonObject mainJsonObject;
+    QJsonObject innerJsonObject;
+
+
+    innerJsonObject["login"] = ui->login_lineEdit->text();
+    innerJsonObject["password"] = ui->password_lineEdit->text();
+
+    switch (jsonFile) {
+    case JsonFileType::SignInData:
+
+        mainJsonObject["login"] = innerJsonObject;
+        break;
+    case JsonFileType::RegisterUser:
+
+        mainJsonObject["register"] = innerJsonObject;
+        break;
+    default:
+        break;
+    }
+
+    // Convert the JSON object to a JSON document
+    QJsonDocument jsonDocument(mainJsonObject);
+
+    // Convert the JSON document to a QByteArray
+    QByteArray jsonData = jsonDocument.toJson();
+
+    // Create and open a file for writing
+    QFile file("data.json");
+    if (file.open(QIODevice::WriteOnly))
+    {
+        // Write the JSON data to the file
+        file.write(jsonData);
+        file.close();
+        qDebug() << "JSON file created successfully.";
+    } else
+    {
+        qDebug() << "Failed to create JSON file.";
+    }
+
+    return mainJsonObject;
+}
+
+void AuthenticationForm::sendJsonToServer(const QJsonObject &jsonObject)
+{
+    QJsonDocument jsonDocument(jsonObject);
+    QByteArray jsonData = jsonDocument.toJson();
+
+    // Send the JSON data to the server
+    socket->write(jsonData);
+}
+
+void AuthenticationForm::handleServerResponse(QJsonObject jsonObject)
+{
+    const QString key = jsonObject.begin().key();
+    const QJsonValue value = jsonObject.begin().value();
+
+    qDebug() << "Key:" << key;
+
+    if (key == "login_reslt")
+    {
+        bool login_results = value.toBool();
+        if (login_results)
+        {
+            w.show();
+            this->close();
+        }
+        else
+        {
+
+        }
+    }
+    else if (key == "register_result")
+    {
+        bool login_results = value.toBool();
+        qDebug() << login_results << " - register_result";
+    }
+    else
+    {
+        qDebug() << "Unkown JSON key - " << key;
+    }
+}
+
+
 // Override paintEvent to make background for AuthenticationForm Widget and logo_label.
-// I don't do it in constructor because in it, size gives false values
+// I don't do it in constructor because  size gives false values in it
 void AuthenticationForm::paintEvent(QPaintEvent *event)
 {
     QPixmap pixmap(":/images/background.jpg");
@@ -57,7 +151,7 @@ void AuthenticationForm::paintEvent(QPaintEvent *event)
     paint.drawPixmap(0, 0, pixmap.scaled(widWidth, widHeight, Qt::KeepAspectRatioByExpanding, Qt::SmoothTransformation));
 
     QPixmap logo_pixmap(":/images/inside_logo.png");
-    ui->logo_label->setPixmap(logo_pixmap.scaled(ui->logo_label->size(),
+    ui->logo_label->setPixmap(logo_pixmap.scaled(QSize(ui->logo_label->width(), ui->logo_label->height()),
                                                  Qt::IgnoreAspectRatio, Qt::SmoothTransformation));
     QWidget::paintEvent(event);
 }
@@ -65,5 +159,46 @@ void AuthenticationForm::paintEvent(QPaintEvent *event)
 // Functionality after login button is clicked
 void AuthenticationForm::login_Button_clicked()
 {
-    qDebug() << "Clicked";
+    if (!ui->login_lineEdit->text().isEmpty() && !ui->password_lineEdit->text().isEmpty())
+    {
+        QJsonObject jsonObject = createJsonObject(JsonFileType::SignInData);
+        sendJsonToServer(jsonObject);
+    }
+    else
+    {
+        QMessageBox emptyFieldsBox(QMessageBox::Information, "Empty fields", "Please, fill in all fields", QMessageBox::Ok, this);
+        emptyFieldsBox.exec();
+    }
 }
+
+void AuthenticationForm::socketConnected()
+{
+    qDebug() << "Connected to server.";
+}
+
+void AuthenticationForm::socketDisconnected()
+{
+    qDebug() << "Disconnected from server.";
+
+}
+
+void AuthenticationForm::socketReadyRead()
+{
+    // I use QObject::sender() to get the pointer of the object that emitted the readyRead signal
+    // And convert it to the QTcpSocket class so that I can access its readAll() function.
+    QTcpSocket* client = qobject_cast<QTcpSocket*>(QObject::sender());
+    QByteArray jsonData = client->readAll();
+
+    // Parse the JSON data
+    QJsonDocument jsonDocument = QJsonDocument::fromJson(jsonData);
+
+    // Check if parsing was successful
+    if (!jsonDocument.isNull() && jsonDocument.isObject())
+    {
+        handleServerResponse(jsonDocument.object());
+    }
+}
+
+// Chain of responsibility for server responses
+
+
