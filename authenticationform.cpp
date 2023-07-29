@@ -10,6 +10,7 @@ AuthenticationForm::AuthenticationForm(QWidget *parent) :
     QWidget(parent),
     ui(new Ui::AuthenticationForm),
     socket(new QTcpSocket()),
+    connectedToHost(false),
     login_Button(new AnimatedCustomPushButton())
 {
     ui->setupUi(this);
@@ -54,7 +55,7 @@ AuthenticationForm::~AuthenticationForm()
     delete ui;
 }
 
-
+// This function creates JSON objects depending on the JsonFileType enum
 QJsonObject AuthenticationForm::createJsonObject(JsonFileType jsonFile)
 {
     QJsonObject mainJsonObject;
@@ -99,6 +100,7 @@ QJsonObject AuthenticationForm::createJsonObject(JsonFileType jsonFile)
     return mainJsonObject;
 }
 
+// This function sends data (QJSonObject) to the server
 void AuthenticationForm::sendJsonToServer(const QJsonObject &jsonObject)
 {
     QJsonDocument jsonDocument(jsonObject);
@@ -108,7 +110,8 @@ void AuthenticationForm::sendJsonToServer(const QJsonObject &jsonObject)
     socket->write(jsonData);
 }
 
-void AuthenticationForm::handleServerResponse(QJsonObject jsonObject)
+// This function proceeds JSON data depending on the key of the JSON file
+void AuthenticationForm::processServerResponse(QJsonObject jsonObject)
 {
     const QString key = jsonObject.begin().key();
     const QJsonValue value = jsonObject.begin().value();
@@ -120,12 +123,22 @@ void AuthenticationForm::handleServerResponse(QJsonObject jsonObject)
         bool login_results = value.toBool();
         if (login_results)
         {
-            w.show();
+            ui->data_correctness_label->setStyleSheet("color:green;");
+            ui->data_correctness_label->setText("Welcome " + ui->login_lineEdit->text());
+
+            disconnect(socket, SIGNAL(connected()), this, SLOT(socketConnected()));
+            disconnect(socket, SIGNAL(disconnected()), this, SLOT(socketDisconnected()));
+            disconnect(socket, SIGNAL(readyRead()), this, SLOT(socketReadyRead()));
+
+            mainMessengerWindow.setSocket(socket);
+            mainMessengerWindow.setLogin(ui->login_lineEdit->text());
+            mainMessengerWindow.show();
             this->close();
         }
         else
         {
-
+            ui->data_correctness_label->setStyleSheet("color:red;");
+            ui->data_correctness_label->setText("Invalid login or password");
         }
     }
     else if (key == "register_result")
@@ -135,7 +148,7 @@ void AuthenticationForm::handleServerResponse(QJsonObject jsonObject)
     }
     else
     {
-        qDebug() << "Unkown JSON key - " << key;
+        qDebug() << "unkown key - " << key;
     }
 }
 
@@ -171,23 +184,27 @@ void AuthenticationForm::login_Button_clicked()
     }
 }
 
+// This slot invokes whenever socket is connected to the server
 void AuthenticationForm::socketConnected()
 {
     qDebug() << "Connected to server.";
+    connectedToHost = true;
 }
 
+// This slot invokes whenever socket is disconnected from the server
 void AuthenticationForm::socketDisconnected()
 {
     qDebug() << "Disconnected from server.";
-
+    connectedToHost = false;
 }
 
+// This slot invokes when the server sends some data to the socket and it is ready to be read
 void AuthenticationForm::socketReadyRead()
 {
     // I use QObject::sender() to get the pointer of the object that emitted the readyRead signal
     // And convert it to the QTcpSocket class so that I can access its readAll() function.
-    QTcpSocket* client = qobject_cast<QTcpSocket*>(QObject::sender());
-    QByteArray jsonData = client->readAll();
+    QTcpSocket* server = qobject_cast<QTcpSocket*>(QObject::sender());
+    QByteArray jsonData = server->readAll();
 
     // Parse the JSON data
     QJsonDocument jsonDocument = QJsonDocument::fromJson(jsonData);
@@ -195,10 +212,9 @@ void AuthenticationForm::socketReadyRead()
     // Check if parsing was successful
     if (!jsonDocument.isNull() && jsonDocument.isObject())
     {
-        handleServerResponse(jsonDocument.object());
+        processServerResponse(jsonDocument.object());
     }
 }
 
-// Chain of responsibility for server responses
 
 

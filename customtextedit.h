@@ -7,7 +7,7 @@
 
 //I Create custom QTextEdit, because - on pressing the Enter button, QTextEdit, creates an additional line of input.
 //In instant messengers, by clicking on this button, messages are usually sent, and to move to a new line,
-//they use Enter + Ctrl, which I implement here. More Explanatory comments will be inside the customtextedit.cpp file
+//they use Enter + Ctrl, which I implemented here. More Explanatory comments will be inside the customtextedit.cpp file
 class CustomTextEdit : public QTextEdit
 {
     Q_OBJECT

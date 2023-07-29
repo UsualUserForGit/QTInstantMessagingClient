@@ -24,16 +24,16 @@ public:
     ~AuthenticationForm();
 
 private:
-    Ui::AuthenticationForm *ui;
-    MainWindow w;
-    QTcpSocket* socket;
-
-
     enum class JsonFileType {SignInData, RegisterUser, SignInResults, RegisterUserResults};
 
     QJsonObject createJsonObject(JsonFileType jsonFile);
     void sendJsonToServer(const QJsonObject& jsonObject);
-    void handleServerResponse(QJsonObject jsonObject);
+    void processServerResponse(QJsonObject jsonObject);
+
+    Ui::AuthenticationForm *ui;
+    QTcpSocket* socket;
+    MainWindow mainMessengerWindow;
+    bool connectedToHost;
 
 protected:
     AnimatedCustomPushButton *login_Button;
