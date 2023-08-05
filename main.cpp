@@ -13,8 +13,5 @@ int main(int argc, char *argv[])
     form.setWindowIcon(QIcon(":/images/inside_logo.png"));
     form.show();
 
-    //MainWindow w;
-    //w.show();
-
     return a.exec();
 }

@@ -1,4 +1,3 @@
-#include <QPainter>
 #include <QDebug>
 #include <QMessageBox>
 
@@ -76,25 +75,6 @@ QJsonObject AuthenticationForm::createJsonObject(JsonFileType jsonFile)
         break;
     default:
         break;
-    }
-
-    // Convert the JSON object to a JSON document
-    QJsonDocument jsonDocument(mainJsonObject);
-
-    // Convert the JSON document to a QByteArray
-    QByteArray jsonData = jsonDocument.toJson();
-
-    // Create and open a file for writing
-    QFile file("data.json");
-    if (file.open(QIODevice::WriteOnly))
-    {
-        // Write the JSON data to the file
-        file.write(jsonData);
-        file.close();
-        qDebug() << "JSON file created successfully.";
-    } else
-    {
-        qDebug() << "Failed to create JSON file.";
     }
 
     return mainJsonObject;

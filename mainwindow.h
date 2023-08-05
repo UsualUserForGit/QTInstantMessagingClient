@@ -7,11 +7,14 @@
 #include <QDebug>
 #include <QShortcut>
 #include <QHostAddress>
+#include <QPaintEvent>
+#include <QPainter>
 
 #include <QTcpSocket>
 
 #include <QJsonDocument>
 #include <QJsonObject>
+#include <QJsonArray>
 
 
 namespace Ui {
@@ -31,14 +34,6 @@ public:
 
     ~MainWindow();
 
-private slots:
-
-    void on_sendButton_clicked();
-    void on_enter_ctrl_pressed();
-    void socketDisconnected();
-    void socketStateChanged(QAbstractSocket::SocketState state);
-    void socketReadyRead();
-
 private:
     enum class JsonFileType {Message, LoadChannelMessages};
 
@@ -47,15 +42,24 @@ private:
     QTcpSocket* socket;
     CustomTextEdit* message_input_text_edit;
     QTabBar *tabbar;
-    QTime lastMessageSentTime;
+    QDateTime lastMessageSentTime;
     QString lastMessageSender;
     QString login;
 
-    QJsonObject createJsonObject(JsonFileType jsonFile);
+    QJsonObject createJsonObject(JsonFileType jsonFile, int index = -1);
     void processServerResponse(QJsonObject jsonObject);
     void sendJsonToServer(const QJsonObject& jsonObject);
 
-    void printMessage(QString text, QString name, QTime time);
+    void printMessage(QString text, QString name, QDateTime time);
+
+private slots:
+
+    void on_sendButton_clicked();
+    void on_enter_ctrl_pressed();
+    void socketDisconnected();
+    void socketStateChanged(QAbstractSocket::SocketState state);
+    void socketReadyRead();
+    void tabBar_clicked(int index);
 };
 
 #endif // MAINWINDOW_H

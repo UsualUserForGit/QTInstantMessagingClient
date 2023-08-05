@@ -3,6 +3,7 @@
 
 #include <QLabel>
 #include <QTabBar>
+#include <QDateTime>
 
 
 MainWindow::MainWindow(QWidget *parent) :
@@ -20,16 +21,9 @@ MainWindow::MainWindow(QWidget *parent) :
     tabbar = ui->tabWidget->tabBar();
     ui->tabWidget->setTabText(0, "");
 
-    //ui->tabWidget->setTabText(1, "");
-
-
     QLabel *lbl1 = new QLabel();
-    lbl1->setText("General chat");
+    lbl1->setText("General Chat");
     tabbar->setTabButton(0, QTabBar::LeftSide, lbl1);
-
-//    QLabel *lbl2 = new QLabel();
-//    lbl2->setText("tab 2");
-//    tabbar->setTabButton(1, QTabBar::LeftSide, lbl2);
 
     // Setting up the CustomTextEdit widget and it's properties.
     message_input_text_edit->setMaximumHeight(30);
@@ -48,30 +42,46 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(enterCtrlShortcut, SIGNAL(activated()), this, SLOT(on_enter_ctrl_pressed()));
     connect(message_input_text_edit, SIGNAL(enterPressed()), this, SLOT(on_sendButton_clicked()));
     connect(ui->send_Button, SIGNAL(clicked()), this, SLOT(on_sendButton_clicked()));
+    connect(ui->tabWidget, SIGNAL(tabBarClicked(int)), this, SLOT(tabBar_clicked(int)));
 }
+
+
 
 // This function adds some HTML to the message text and prints it in a chat display.
 // If no more than 10 minutes have passed between the user's first and second message,
 // the message is displayed without login
-void MainWindow::printMessage(QString text, QString name, QTime time)
+void MainWindow::printMessage(QString text, QString name, QDateTime time)
 {
+    QString dayTime = time.toString().mid(9, 8);
+
     QString message = "<p><font size=\"5\" color=\"#1CE5F3\" face=\"Arial\">" + name + "</font></p> "
-                                          "<font size=\"5\" color=\"black\" face=\"Calibri\">"+ text + "</font>"
-                                          " <font size=\"3\" color=\"grey\" face=\"Calibri\">"+ time.toString() + "</font>";
+                                                                                       "<font size=\"5\" color=\"black\" face=\"Calibri\">"+ text + "</font>"
+                               " <font size=\"3\" color=\"grey\" face=\"Calibri\">"+ dayTime + "</font>";
 
     if (lastMessageSender.isNull() || !lastMessageSentTime.isValid())
     {
         lastMessageSentTime = time;
         lastMessageSender = name;
     }
-    else if(time.minute() - lastMessageSentTime.minute() <= 10 || lastMessageSender != name)
+    else
     {
-        message = "<font size=\"5\" color=\"black\" face=\"Calibri\">"+ text + "</font>"
-            " <font size=\"3\" color=\"grey\" face=\"Calibri\">"+ time.toString() + "</font></p>";
+        if (time.date().dayOfWeek() != lastMessageSentTime.date().dayOfWeek())
+        {
+            ui->chatDisplay->append("<p style = \"text-align: center;\"><hr><font size=\"5\" color=\"grey\" face=\"Arial\">" +
+                                    time.date().toString() + "</font></p><hr><br>");
+        }
+        if(time.time().minute() - lastMessageSentTime.time().minute() <= 10 && lastMessageSender == name)
+        {
+            message = "<font size=\"5\" color=\"black\" face=\"Calibri\">"
+                      + text + "</font>"
+                               " <font size=\"3\" color=\"grey\" face=\"Calibri\">"+ dayTime + "</font>";
+        }
     }
 
+    qDebug() << "Last message sender - " << lastMessageSender << " New message sender - " << name;
     lastMessageSentTime = time;
     lastMessageSender = name;
+
 
     ui->chatDisplay->append(message);
 }
@@ -128,7 +138,7 @@ void MainWindow::on_sendButton_clicked()
 {
     if (!message_input_text_edit->toPlainText().isEmpty())
     {
-        QJsonObject jsonObject = createJsonObject(JsonFileType::Message);
+        QJsonObject jsonObject = createJsonObject(JsonFileType::Message, tabbar->currentIndex());
         sendJsonToServer(jsonObject);
         message_input_text_edit->clear();
         message_input_text_edit->setMaximumHeight(24);
@@ -189,48 +199,56 @@ void MainWindow::socketReadyRead()
     {
         processServerResponse(jsonDocument.object());
     }
+    else
+    {
+        qDebug() << "jsonDocument error";
+    }
+}
+
+void MainWindow::tabBar_clicked(int index)
+{
+    if (index != ui->tabWidget->currentIndex())
+    {
+        QJsonObject jsonObject = createJsonObject(JsonFileType::LoadChannelMessages, index);
+        sendJsonToServer(jsonObject);
+    }
 }
 
 // This function creates JSON objects depending on the JsonFileType enum
-QJsonObject MainWindow::createJsonObject(JsonFileType jsonFile)
+QJsonObject MainWindow::createJsonObject(JsonFileType jsonFile,int index)
 {
+
     QJsonObject mainJsonObject;
     QJsonObject innerJsonObject;
 
-    switch (jsonFile) {
-    case JsonFileType::Message:
-        innerJsonObject["sender"] = this->login;
-        innerJsonObject["message_text"] = message_input_text_edit->toPlainText();
-        innerJsonObject["created_at"] = QTime::currentTime().toString();
-        innerJsonObject["chatline_name"] = "General chat";
+    if (index != -1)
+    {
+        QLabel *tabButton_label = qobject_cast<QLabel*>(tabbar->tabButton(index, QTabBar::LeftSide));
+        switch (jsonFile)
+        {
+        case JsonFileType::Message:
 
-        mainJsonObject["message"] = innerJsonObject;
-        break;
-    case JsonFileType::LoadChannelMessages:
-        // Доделать
-        mainJsonObject["load_channel_messages"] = innerJsonObject;
-        break;
-    default:
-        break;
+            innerJsonObject["sender"] = this->login;
+            innerJsonObject["message_text"] = message_input_text_edit->toPlainText();
+            innerJsonObject["created_at"] = QDateTime::currentDateTime().toString("yyyy-MM-ddTHH:mm:ss");
+            innerJsonObject["chatline_name"] = tabButton_label->text();
+
+            mainJsonObject["message"] = innerJsonObject;
+            break;
+        case JsonFileType::LoadChannelMessages:
+            // Доделать
+
+            innerJsonObject["chatline_name"] = tabButton_label->text();
+            mainJsonObject["load_chatline_messages"] = innerJsonObject;
+            break;
+        default:
+            break;
+        }
+
     }
-
-    // Convert the JSON object to a JSON document
-    QJsonDocument jsonDocument(mainJsonObject);
-
-    // Convert the JSON document to a QByteArray
-    QByteArray jsonData = jsonDocument.toJson();
-
-    // Create and open a file for writing
-    QFile file("data.json");
-    if (file.open(QIODevice::WriteOnly))
+    else
     {
-        // Write the JSON data to the file
-        file.write(jsonData);
-        file.close();
-        qDebug() << "JSON file created successfully.";
-    } else
-    {
-        qDebug() << "Failed to create JSON file.";
+        qDebug() << "Wrong index - " << index;
     }
 
     return mainJsonObject;
@@ -248,17 +266,33 @@ void MainWindow::processServerResponse(QJsonObject jsonObject)
         QJsonObject messageObject = jsonObject.value("message").toObject();
 
         // Extract individual values from the "message" object
-        QString chatline_name = messageObject.value("chatline_name").toString();
-        QString created_at = messageObject.value("created_at").toString();
+        QDateTime created_at = QDateTime::fromString(messageObject.value("created_at").toString(), "yyyy-MM-ddTHH:mm:ss");
         QString message = messageObject.value("message_text").toString();
         QString sender = messageObject.value("sender").toString();
+
+        // Remove the date part from the original string
+        qDebug() << "Message created at - " << created_at.toString();
         // Print the extracted values
-
-        printMessage(message, sender, QTime::fromString(created_at));
+        printMessage(message, sender, created_at);
     }
-    else
+    else if (key == "messages_to_load")
     {
+        QJsonArray jsonArray = jsonObject["messages_to_load"].toArray();
 
+        // Iterate over the messages and output their contents
+        for (const QJsonValue& value : jsonArray)
+        {
+            QJsonObject messageObject = value.toObject();
+
+            //qDebug() << "Chatline Name:" << messageObject["chatline_name"].toString();
+            QDateTime created_at = QDateTime::fromString(messageObject["created_at"].toString(), "yyyy-MM-ddTHH:mm:ss.zzz");
+            QString message = messageObject["message_text"].toString();
+            QString sender = messageObject["sender"].toString();
+
+            qDebug() << "loaded message created at - " << created_at.toString();
+
+            printMessage(message, sender, created_at);
+        }
     }
 }
 
