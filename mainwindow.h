@@ -17,6 +17,7 @@
 #include <QJsonArray>
 
 
+// More Explanatory comments will be inside the .cpp file
 namespace Ui {
 class MainWindow;
 }

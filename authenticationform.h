@@ -11,6 +11,7 @@
 #include <QTcpSocket>
 
 
+// More Explanatory comments will be inside the .cpp file
 namespace Ui {
 class AuthenticationForm;
 }
@@ -33,15 +34,18 @@ private:
     Ui::AuthenticationForm *ui;
     QTcpSocket* socket;
     MainWindow mainMessengerWindow;
+    AnimatedCustomPushButton *login_Button;
+    AnimatedCustomPushButton *register_Button;
     bool connectedToHost;
 
 protected:
-    AnimatedCustomPushButton *login_Button;
+
 
     void paintEvent(QPaintEvent *event) override;
 
 private slots:
     void login_Button_clicked();
+    void register_Button_clicked();
 
     void socketConnected();
     void socketDisconnected();

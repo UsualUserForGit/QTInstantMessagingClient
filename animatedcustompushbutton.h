@@ -6,6 +6,7 @@
 #include <QPropertyAnimation>
 
 
+// More Explanatory comments will be inside the .cpp file
 class AnimatedCustomPushButton : public QPushButton
 {
     Q_OBJECT

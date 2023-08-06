@@ -78,7 +78,6 @@ void MainWindow::printMessage(QString text, QString name, QDateTime time)
         }
     }
 
-    qDebug() << "Last message sender - " << lastMessageSender << " New message sender - " << name;
     lastMessageSentTime = time;
     lastMessageSender = name;
 
@@ -259,8 +258,6 @@ void MainWindow::processServerResponse(QJsonObject jsonObject)
 {
     const QString key = jsonObject.begin().key();
 
-    qDebug() << "Key:" << key;
-
     if (key == "message")
     {
         QJsonObject messageObject = jsonObject.value("message").toObject();
@@ -270,8 +267,6 @@ void MainWindow::processServerResponse(QJsonObject jsonObject)
         QString message = messageObject.value("message_text").toString();
         QString sender = messageObject.value("sender").toString();
 
-        // Remove the date part from the original string
-        qDebug() << "Message created at - " << created_at.toString();
         // Print the extracted values
         printMessage(message, sender, created_at);
     }
@@ -284,12 +279,9 @@ void MainWindow::processServerResponse(QJsonObject jsonObject)
         {
             QJsonObject messageObject = value.toObject();
 
-            //qDebug() << "Chatline Name:" << messageObject["chatline_name"].toString();
             QDateTime created_at = QDateTime::fromString(messageObject["created_at"].toString(), "yyyy-MM-ddTHH:mm:ss.zzz");
             QString message = messageObject["message_text"].toString();
             QString sender = messageObject["sender"].toString();
-
-            qDebug() << "loaded message created at - " << created_at.toString();
 
             printMessage(message, sender, created_at);
         }
